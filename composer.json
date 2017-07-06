@@ -1,0 +1,19 @@
+{
+    "name": "tweedegolf/prometheus-client",
+    "description": "A PHP Prometheus client library",
+    "license": "MIT",
+    "autoload": {
+      "psr-4": {
+        "TweedeGolf\\PrometheusClient\\": "src/"
+      }
+    },
+    "authors": [
+        {
+            "name": "Ruben Nijveld",
+            "email": "ruben@tweedegolf.com"
+        }
+    ],
+    "require": {
+      "php": ">=5.6.0"
+    }
+}
