@@ -6,10 +6,18 @@ use TweedeGolf\PrometheusClient\Collector\CollectorInterface;
 use TweedeGolf\PrometheusClient\Collector\Counter;
 use TweedeGolf\PrometheusClient\Collector\Gauge;
 use TweedeGolf\PrometheusClient\Collector\Histogram;
+use TweedeGolf\PrometheusClient\Storage\InMemoryAdapter;
 use TweedeGolf\PrometheusClient\Storage\StorageAdapterInterface;
+use TweedeGolf\PrometheusClient\Util\ApcStatsCreator;
+use TweedeGolf\PrometheusClient\Util\ApcuStatsCreator;
+use TweedeGolf\PrometheusClient\Util\OpcacheStatsCreator;
 
 class CollectorRegistry
 {
+    const DEFAULT_STORAGE = 'default';
+
+    const MEMORY_STORAGE = 'memory';
+
     /**
      * @var CollectorInterface[]
      */
@@ -18,11 +26,33 @@ class CollectorRegistry
     /**
      * @var StorageAdapterInterface
      */
-    private $storage;
+    private $storageAdapters = [];
 
-    public function __construct(StorageAdapterInterface $storage)
+    /**
+     * @param StorageAdapterInterface $defaultStorage
+     * @param bool $makeMemoryAdapter
+     * @param bool $registerDefaults
+     */
+    public function __construct(StorageAdapterInterface $defaultStorage, $makeMemoryAdapter = true, $registerDefaults = true)
     {
-        $this->storage = $storage;
+        $this->registerStorageAdapter(self::DEFAULT_STORAGE, $defaultStorage);
+
+        if ($makeMemoryAdapter) {
+            $this->registerStorageAdapter(self::MEMORY_STORAGE, new InMemoryAdapter());
+        }
+
+        if ($registerDefaults) {
+            $this->createDefaultStats();
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param StorageAdapterInterface $adapter
+     */
+    public function registerStorageAdapter($name, StorageAdapterInterface $adapter)
+    {
+        $this->storageAdapters[$name] = $adapter;
     }
 
     /**
@@ -135,15 +165,29 @@ class CollectorRegistry
     }
 
     /**
+     * @param string $adapterName
+     * @return StorageAdapterInterface
+     */
+    public function getStorageAdapter($adapterName)
+    {
+        if (isset($this->storageAdapters[$adapterName])) {
+            return $this->storageAdapters[$adapterName];
+        }
+
+        throw new \RuntimeException("No adapter with name '{$adapterName}' found");
+    }
+
+    /**
      * @param string[]|string $name
      * @param string[] $labelNames
      * @param string|null $help
+     * @param string $storage Name of the storage adapter
      * @param bool $register
      * @return Counter
      */
-    public function createCounter($name, array $labelNames = [], $help = null, $register = false)
+    public function createCounter($name, array $labelNames = [], $help = null, $storage = self::DEFAULT_STORAGE, $register = false)
     {
-        $collector = new Counter($this->storage, $name, $labelNames, $help);
+        $collector = new Counter($this->getStorageAdapter($storage), $name, $labelNames, $help);
         if ($register) {
             $this->register($collector);
         }
@@ -156,12 +200,13 @@ class CollectorRegistry
      * @param string[] $labelNames
      * @param callable|mixed|null $initializer
      * @param string|null $help
+     * @param string $storage Name of the storage adapter
      * @param bool $register
      * @return Gauge
      */
-    public function createGauge($name, array $labelNames = [], $initializer = null, $help = null, $register = false)
+    public function createGauge($name, array $labelNames = [], $initializer = null, $help = null, $storage = self::DEFAULT_STORAGE, $register = false)
     {
-        $collector = new Gauge($this->storage, $name, $labelNames, $initializer, $help);
+        $collector = new Gauge($this->getStorageAdapter($storage), $name, $labelNames, $initializer, $help);
         if ($register) {
             $this->register($collector);
         }
@@ -174,12 +219,13 @@ class CollectorRegistry
      * @param string[] $labelNames
      * @param float[]|null $buckets
      * @param string|null $help
+     * @param string $storage Name of the storage adapter
      * @param bool $register
      * @return Histogram
      */
-    public function createHistogram($name, array $labelNames = [], $buckets = null, $help = null, $register = false)
+    public function createHistogram($name, array $labelNames = [], $buckets = null, $help = null, $storage = self::DEFAULT_STORAGE, $register = false)
     {
-        $collector = new Histogram($this->storage, $name, $labelNames, $buckets, $help);
+        $collector = new Histogram($this->getStorageAdapter($storage), $name, $labelNames, $buckets, $help);
         if ($register) {
             $this->register($collector);
         }
@@ -198,5 +244,12 @@ class CollectorRegistry
         }
 
         return $samples;
+    }
+
+    private function createDefaultStats()
+    {
+        ApcStatsCreator::make($this);
+        ApcuStatsCreator::make($this);
+        OpcacheStatsCreator::make($this);
     }
 }

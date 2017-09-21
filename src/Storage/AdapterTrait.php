@@ -28,4 +28,6 @@ trait AdapterTrait
         }
         return $this->getPrefix().'|'.$prefix.'|'.$key.'|'.$labelHash;
     }
+
+
 }
