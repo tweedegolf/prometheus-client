@@ -164,7 +164,13 @@ class Gauge implements CollectorInterface
         }
 
         if (count($samples) === 0 && count($this->labelNames) === 0) {
-            $samples[] = new Sample($this->name, [], [], 0);
+            $initValue = 0;
+            if ($this->initializer !== null) {
+                $init = $this->initializer;
+                $initValue = $init([], [], $this->name);
+                $this->set($initValue, []); // cache the initializer value
+            }
+            $samples[] = new Sample($this->name, [], [], $initValue);
         }
 
         if (count($samples) === 0) {
