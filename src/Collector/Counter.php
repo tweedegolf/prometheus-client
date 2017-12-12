@@ -84,7 +84,7 @@ class Counter implements CollectorInterface
             throw new PrometheusException("Increment must be positive");
         }
         Validator::validateLabelValues($labelValues, $this->labelNames);
-        $this->storage->incValue($this->name, $v, is_int($v) ? 0 : 0.0, $this->labelNames);
+        $this->storage->incValue($this->name, $v, is_int($v) ? 0 : 0.0, $labelValues);
 
         return $this;
     }

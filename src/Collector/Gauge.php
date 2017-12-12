@@ -109,7 +109,7 @@ class Gauge implements CollectorInterface
                 return 0;
             }
         };
-        $this->storage->incValue($this->name, $v, $default, $this->labelNames);
+        $this->storage->incValue($this->name, $v, $default, $labelValues);
 
         return $this;
     }
