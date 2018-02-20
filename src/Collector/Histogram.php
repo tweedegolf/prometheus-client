@@ -3,6 +3,8 @@
 namespace TweedeGolf\PrometheusClient\Collector;
 
 use TweedeGolf\PrometheusClient\PrometheusException;
+use TweedeGolf\PrometheusClient\Sample;
+use TweedeGolf\PrometheusClient\MetricFamilySamples;
 use TweedeGolf\PrometheusClient\Validator;
 use TweedeGolf\PrometheusClient\Storage\StorageAdapterInterface;
 
@@ -109,6 +111,7 @@ class Histogram implements CollectorInterface
                 $this->storage->incValue($this->name, 1, 0, array_merge([$bucketMax], $labelValues));
             }
         }
+
         $this->storage->incValue($this->name, 1, 0, array_merge(['+Inf'], $labelValues));
 
         return $this;
@@ -119,6 +122,37 @@ class Histogram implements CollectorInterface
      */
     public function collect()
     {
-        // TODO: Implement collect() method.
+        $counts = $this->getSamples($this->name.self::COUNT_POSTFIX);
+        $sums = $this->getSamples($this->name.self::SUM_POSTFIX);
+
+        $samples = [];
+        foreach ($this->storage->getValues($this->name) as $row) {
+            $samples[] = new Sample($this->name, array_merge(['le'], $this->labelNames), $row[1], $row[0]);
+        }
+
+        return [
+            new MetricFamilySamples(
+                $this->name,
+                $this->getType(),
+                $this->getHelp(),
+                array_merge($counts, $sums, $samples)
+            ),
+        ];
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return Sample[]
+     */
+    private function getSamples($name)
+    {
+        $data = $this->storage->getValues($name);
+        $samples = [];
+        foreach ($data as $row) {
+            $samples[] = new Sample($name, $this->labelNames, $row[1], $row[0]);
+        }
+
+        return $samples;
     }
 }
