@@ -112,9 +112,7 @@ class Histogram implements CollectorInterface
             }
         }
 
-        if ($v > $this->buckets[count($this->buckets) - 1]) {
-            $this->storage->incValue($this->name, 1, 0, array_merge(['+Inf'], $labelValues));
-        }
+        $this->storage->incValue($this->name, 1, 0, array_merge(['+Inf'], $labelValues));
 
         return $this;
     }
