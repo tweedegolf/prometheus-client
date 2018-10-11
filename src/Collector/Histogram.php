@@ -127,7 +127,7 @@ class Histogram implements CollectorInterface
 
         $samples = [];
         foreach ($this->storage->getValues($this->name) as $row) {
-            $samples[] = new Sample($this->name, array_merge(['le'], $this->labelNames), $row[1], $row[0]);
+            $samples[] = new Sample("{$this->name}_bucket", array_merge(['le'], $this->labelNames), $row[1], $row[0]);
         }
 
         return [
