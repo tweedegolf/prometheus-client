@@ -23,9 +23,8 @@ class RedisAdapter implements StorageAdapterInterface
 
     public function getValues($key)
     {
-        $keyPrefix = "{$this->prefix}||${key}|*";
         $items = [];
-        foreach ($this->redis->getKeys($keyPrefix) as $entry) {
+        foreach ($this->redis->sMembers($this->getSetName($key)) as $entry) {
             // get the value
             $value = $this->redis->get($entry);
             $value = $value === false ? null : floatval($value);
@@ -65,15 +64,20 @@ class RedisAdapter implements StorageAdapterInterface
     public function setValue($key, $value, array $labelValues)
     {
         $this->redis->setNx($this->getKey($key, $labelValues, StorageAdapterInterface::LABEL_PREFIX), json_encode($labelValues));
-        $this->redis->set($this->getKey($key, $labelValues), $value);
+
+        $fullKey = $this->getKey($key, $labelValues);
+        $this->redis->sAdd($this->getSetName($key), $fullKey);
+        $this->redis->set($fullKey, $value);
     }
 
     public function incValue($key, $inc, $default, array $labelValues)
     {
         $this->redis->setNx($this->getKey($key, $labelValues, StorageAdapterInterface::LABEL_PREFIX), json_encode($labelValues));
+
         $stored = false;
         $tries = 0;
         $fullKey = $this->getKey($key, $labelValues);
+        $this->redis->sAdd($this->getSetName($key), $fullKey);
         while ($stored === false) {
             $this->redis->watch($fullKey);
             if (!$this->redis->exists($fullKey)) {
@@ -90,5 +94,10 @@ class RedisAdapter implements StorageAdapterInterface
     public function hasValue($key, array $labelValues)
     {
         return $this->redis->exists($this->getKey($key, $labelValues));
+    }
+
+    private function getSetName($key)
+    {
+        return $this->getPrefix().'|'.$key;
     }
 }
