@@ -87,7 +87,7 @@ class RedisAdapterTest extends TestCase
         static::assertTrue((bool)$redisAdapter->hasValue($testKey, $testLabels));
         $value = $redisAdapter->getValue($testKey, $testLabels);
 
-        static::assertInternalType('float', $value);
+        static::assertTrue(is_float($value));
         static::assertSame(0.0, $value);
     }
 
