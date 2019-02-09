@@ -3,9 +3,9 @@
     "description": "A PHP Prometheus client library",
     "license": "MIT",
     "autoload": {
-      "psr-4": {
-        "TweedeGolf\\PrometheusClient\\": "src/"
-      }
+        "psr-4": {
+            "TweedeGolf\\PrometheusClient\\": "src/"
+        }
     },
     "authors": [
         {
@@ -14,6 +14,12 @@
         }
     ],
     "require": {
-      "php": ">=5.6.0"
+        "php": ">=7.0",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=6.0",
+        "predis/predis": "^1.1",
+        "ext-redis": "*"
     }
 }
