@@ -10,7 +10,7 @@ class RedisAdapterTest extends TestCase
 {
     use AdapterTrait;
 
-    private $host = '127.0.0.1';
+    private $host = 'localhost';
 
     /**
      * @test
