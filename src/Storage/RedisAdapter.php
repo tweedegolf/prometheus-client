@@ -2,6 +2,8 @@
 
 namespace TweedeGolf\PrometheusClient\Storage;
 
+use Predis\Client;
+
 class RedisAdapter implements StorageAdapterInterface
 {
     use AdapterTrait;
@@ -10,9 +12,19 @@ class RedisAdapter implements StorageAdapterInterface
 
     private $redis;
 
-    public function __construct(\Redis $redis, $prefix = StorageAdapterInterface::DEFAULT_KEY_PREFIX)
+    /**
+     * RedisAdapter constructor.
+     * @param \Redis|\Predis\Client $redisClient
+     * @param string $prefix
+     */
+    public function __construct($redisClient, $prefix = StorageAdapterInterface::DEFAULT_KEY_PREFIX)
     {
-        $this->redis = $redis;
+        if (!$redisClient instanceof \Redis && !$redisClient instanceof \Predis\Client) {
+            throw new \InvalidArgumentException(
+                sprintf('%s() expects parameter 1 to be Redis, RedisArray, RedisCluster or Predis\Client, %s given.', __METHOD__, \is_object($redisClient) ? \get_class($redisClient) : \gettype($redisClient)));
+        }
+
+        $this->redis = $redisClient;
         $this->prefix = $prefix;
     }
 
@@ -81,10 +93,15 @@ class RedisAdapter implements StorageAdapterInterface
         while ($stored === false) {
             $this->redis->watch($fullKey);
             if (!$this->redis->exists($fullKey)) {
-                $stored = $this->redis->multi()
-                    ->set($fullKey, is_callable($default) ? $default() : $default)
-                    ->incrByFloat($fullKey, $inc)
-                    ->exec();
+                if ($this->redis instanceof \Redis) {
+                    $stored = $this->redis->multi()
+                        ->set($fullKey, is_callable($default) ? $default() : $default)
+                        ->incrByFloat($fullKey, $inc)
+                        ->exec();
+                } elseif ($this->redis instanceof Client) {
+                    $this->redis->set($fullKey, is_callable($default) ? $default() : $default);
+                    $stored = $this->redis->incrByFloat($fullKey, $inc);
+                }
             } else {
                 $stored = $this->redis->incrByFloat($fullKey, $inc);
             }
