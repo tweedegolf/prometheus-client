@@ -21,7 +21,8 @@ class RedisAdapter implements StorageAdapterInterface
     {
         if (!$redisClient instanceof \Redis && !$redisClient instanceof \Predis\Client) {
             throw new \InvalidArgumentException(
-                sprintf('%s() expects parameter 1 to be Redis, RedisArray, RedisCluster or Predis\Client, %s given.', __METHOD__, \is_object($redisClient) ? \get_class($redisClient) : \gettype($redisClient)));
+                sprintf('%s() expects parameter 1 to be Redis or Predis\Client, %s given.', __METHOD__, \is_object($redisClient) ? \get_class($redisClient) : \gettype($redisClient))
+            );
         }
 
         $this->redis = $redisClient;
