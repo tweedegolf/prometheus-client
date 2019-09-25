@@ -36,7 +36,7 @@ class RedisAdapter implements StorageAdapterInterface
 
             // check label data
             if (is_string($labelData) && strlen($labelData) > 0) {
-                $labels = json_decode($labelData);
+                $labels = json_decode($labelData, true);
             } else {
                 $labels = [];
             }
