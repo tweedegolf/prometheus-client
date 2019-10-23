@@ -8,7 +8,7 @@ interface FormatterInterface
 {
     /**
      * @param MetricFamilySamples[] $metricFamilySamples
-     * @return string
+     * @return mixed
      */
     public function format(array $metricFamilySamples);
 
