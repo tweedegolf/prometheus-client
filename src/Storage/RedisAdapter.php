@@ -37,15 +37,33 @@ class RedisAdapter implements StorageAdapterInterface
     public function getValues($key)
     {
         $items = [];
-        foreach ($this->redis->sMembers($this->getSetName($key)) as $entry) {
-            // get the value
-            $value = $this->redis->get($entry);
-            $value = $value === false ? null : floatval($value);
+
+        // get all the members for the key set
+        $members = $this->redis->sMembers($this->getSetName($key));
+
+        // return early if we have no members
+        if ( ! count($members)) return $items;
+
+		$labelMembers = [];
+		// get all the label versions of the key
+		foreach ($members as $entry) {
+			// get the labels
+			list(, , $key, $extra) = explode('|', $entry, 4);
+			$labelMembers[] = "{$this->prefix}|" . StorageAdapterInterface::LABEL_PREFIX . "|{$key}|{$extra}";
+		}
+
+		// get all labels with mget to reduce trips to redis
+		$labelValues = array_combine($members, $this->redis->mget($labelMembers));
+
+        // get all values with mget to reduce trips to redis
+        foreach (array_combine($members, $this->redis->mget($members)) as $entry => $value) {
+            // cast value to float unless null or false
+            if ($value !== null) {
+                $value = $value === false ? null : floatval($value);
+            }
 
             // get the labels
-            list(,,$key,$extra) = explode('|', $entry, 4);
-            $labelValuesKey = "{$this->prefix}|".StorageAdapterInterface::LABEL_PREFIX."|{$key}|{$extra}";
-            $labelData = $this->redis->get($labelValuesKey);
+            $labelData = isset($labelValues[$entry]) ? $labelValues[$entry] : null;
 
             // check label data
             if (is_string($labelData) && strlen($labelData) > 0) {
