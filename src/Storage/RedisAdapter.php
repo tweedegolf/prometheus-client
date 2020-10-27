@@ -88,7 +88,6 @@ class RedisAdapter implements StorageAdapterInterface
         $this->redis->setNx($this->getKey($key, $labelValues, StorageAdapterInterface::LABEL_PREFIX), json_encode($labelValues));
 
         $stored = false;
-        $tries = 0;
         $fullKey = $this->getKey($key, $labelValues);
         $this->redis->sAdd($this->getSetName($key), $fullKey);
         while ($stored === false) {
