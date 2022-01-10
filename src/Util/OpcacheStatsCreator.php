@@ -12,7 +12,7 @@ class OpcacheStatsCreator
         if (function_exists('opcache_get_status')) {
             $stats = opcache_get_status(false);
 
-            if ($stats['opcache_enabled']) {
+            if ($stats !== false && $stats['opcache_enabled']) {
                 $stat = new CallbackGauge('opcache_full');
                 $stat->addCallback(function () use ($stats) {
                     return $stats['cache_full'] ? 1 : 0;
