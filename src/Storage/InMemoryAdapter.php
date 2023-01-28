@@ -66,7 +66,7 @@ class InMemoryAdapter implements StorageAdapterInterface
      */
     public function getValues($key)
     {
-        $escapedKey = preg_quote("{$this->prefix}||${key}|", '/');
+        $escapedKey = preg_quote("{$this->prefix}||{$key}|", '/');
         $regex = "/^{$escapedKey}.*$/";
         $items = [];
         foreach ($this->data as $key => $value) {
