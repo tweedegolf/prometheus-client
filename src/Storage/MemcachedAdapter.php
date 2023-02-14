@@ -2,6 +2,8 @@
 
 namespace TweedeGolf\PrometheusClient\Storage;
 
+use Memcached;
+
 class MemcachedAdapter implements StorageAdapterInterface
 {
     use AdapterTrait;
@@ -16,15 +18,15 @@ class MemcachedAdapter implements StorageAdapterInterface
     private $prefix;
 
     /**
-     * @var \Memcached
+     * @var Memcached
      */
     private $pool;
 
     /**
-     * @param \Memcached $pool
+     * @param Memcached $pool
      * @param string $prefix
      */
-    public function __construct(\Memcached $pool, $prefix = StorageAdapterInterface::DEFAULT_KEY_PREFIX)
+    public function __construct(Memcached $pool, $prefix = StorageAdapterInterface::DEFAULT_KEY_PREFIX)
     {
         $this->prefix = $prefix;
         $this->pool = $pool;
@@ -45,17 +47,17 @@ class MemcachedAdapter implements StorageAdapterInterface
     {
         $knownLabelsKey = $this->getKey($key, [], self::KNOWN_LABELS_PREFIX);
         $knownLabels = $this->pool->get($knownLabelsKey);
-        $knownLabelsRetrieved = $this->pool->getResultCode() === \Memcached::RES_SUCCESS;
+        $knownLabelsRetrieved = $this->pool->getResultCode() === Memcached::RES_SUCCESS;
         if (!$knownLabelsRetrieved) {
             return [];
         }
 
         $items = [];
         foreach ($knownLabels as $labelHash) {
-            $value = $this->getKey($key, $labelHash);
-            $valueRetrieved = $this->pool->getResultCode() === \Memcached::RES_SUCCESS;
-            $labels = $this->getKey($key, $labelHash, StorageAdapterInterface::LABEL_PREFIX);
-            $labelsRetrieved = $this->pool->getResultCode() === \Memcached::RES_SUCCESS;
+            $value = $this->pool->get($this->getKey($key, $labelHash));
+            $valueRetrieved = $this->pool->getResultCode() === Memcached::RES_SUCCESS;
+            $labels = $this->pool->get($this->getKey($key, $labelHash, StorageAdapterInterface::LABEL_PREFIX));
+            $labelsRetrieved = $this->pool->getResultCode() === Memcached::RES_SUCCESS;
             if ($valueRetrieved && $labelsRetrieved) {
                 $items[] = [$value, $labels];
             }
@@ -76,7 +78,7 @@ class MemcachedAdapter implements StorageAdapterInterface
         $this->pool->add($knownLabelsKey, [$labelHash]);
         $success = false;
         for ($tries = 0; $success === false && $tries < self::MAX_INC_TRIES; $tries++) {
-            $current = $this->pool->get($knownLabelsKey, null, $casToken);
+            list($current, $casToken) = $this->getWithCas($knownLabelsKey);
             if (!in_array($labelHash, $current, true)) {
                 $success = $this->pool->cas($casToken, $knownLabelsKey, array_merge($current, [$labelHash]));
             } else {
@@ -96,10 +98,10 @@ class MemcachedAdapter implements StorageAdapterInterface
         $labelKey = $this->getKey($key, $labelValues, StorageAdapterInterface::LABEL_PREFIX);
 
         $value = $this->pool->get($valueKey);
-        $valueRetrieved = $this->pool->getResultCode() === \Memcached::RES_SUCCESS;
+        $valueRetrieved = $this->pool->getResultCode() === Memcached::RES_SUCCESS;
 
         $labels = $this->pool->get($labelKey);
-        $labelsRetrieved = $this->pool->getResultCode() === \Memcached::RES_SUCCESS;
+        $labelsRetrieved = $this->pool->getResultCode() === Memcached::RES_SUCCESS;
 
         if ($valueRetrieved && $labelsRetrieved) {
             return [$value, $labels];
@@ -137,8 +139,8 @@ class MemcachedAdapter implements StorageAdapterInterface
         } else {
             $success = false;
             for ($tries = 0; $success === false && $tries < self::MAX_INC_TRIES; $tries++) {
-                $current = $this->pool->get($storeKey, null, $token);
-                $success = $this->pool->cas($token, $storeKey, $current + $inc);
+                list($current, $casToken) = $this->getWithCas($storeKey);
+                $success = $this->pool->cas($casToken, $storeKey, $current + $inc);
             }
         }
         $this->addKnownLabels($key, $labelValues);
@@ -152,6 +154,25 @@ class MemcachedAdapter implements StorageAdapterInterface
     public function hasValue($key, array $labelValues)
     {
         $result = $this->pool->get($this->getKey($key, $labelValues));
-        return false !== $result || $this->pool->getResultCode() !== \Memcached::RES_NOTFOUND;
+        return false !== $result || $this->pool->getResultCode() !== Memcached::RES_NOTFOUND;
+    }
+
+    /**
+     * @param $key
+     * @param null $cb
+     * @param null $cas
+     * @return array
+     */
+    private function getWithCas($key, $cb = null)
+    {
+        if (defined('Memcached::GET_EXTENDED')) {
+            $res = $this->pool->get($key, $cb, Memcached::GET_EXTENDED);
+            $value = $res['value'];
+            $cas = $res['cas'];
+        } else {
+            $cas = null;
+            $value = $this->pool->get($key, $cb, $cas);
+        }
+        return [$value, $cas];
     }
 }
