@@ -70,7 +70,7 @@ class ApcuAdapter implements StorageAdapterInterface
      */
     public function getValues($key)
     {
-        $escapedKey = preg_quote("{$this->prefix}||${key}|", '/');
+        $escapedKey = preg_quote("{$this->prefix}||{$key}|", '/');
         $iterator = new \APCUIterator("/^{$escapedKey}.*$/");
         $items = [];
         foreach ($iterator as $entry) {
