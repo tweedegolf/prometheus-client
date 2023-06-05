@@ -53,6 +53,7 @@ class ApcuAdapter implements StorageAdapterInterface
         \apcu_add($this->getKey($key, $labelValues, StorageAdapterInterface::LABEL_PREFIX), $labelValues);
 
         if (is_float($inc)) {
+            $retrievedCurrent = null;
             // unfortunately we can only non-atomically update this value
             $currentValue = \apcu_fetch($storeKey, $retrievedCurrent);
             if (!$retrievedCurrent) {
