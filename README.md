@@ -1,3 +1,8 @@
+# Not maintained
+
+Since Tweede Golf does not use / maintain this library anymore (for several years already) - this repository is archived.
+If you like like to maintain this - please contact us at support@tweedegolf.com
+
 # Tweede Golf Prometheus PHP Client
 A PHP Client for prometheus, providing several storage backends. This client 
 mostly follows the guidelines as specified in the [prometheus docs].
